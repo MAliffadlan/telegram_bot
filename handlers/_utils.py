@@ -42,9 +42,30 @@ BOT_MESSAGE_LENGTH = 4000
 REPLY_MESSAGE_CACHE = ExpiringDict(max_len=1000, max_age_seconds=600)
 
 
+def telebot_retry(func, *args, max_retries=3, delay=1.5, **kwargs):
+    from telebot.apihelper import ApiTelegramException
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except (requests.exceptions.RequestException, ApiTelegramException) as e:
+            if isinstance(e, ApiTelegramException):
+                if e.error_code == 429:
+                    retry_after = e.result_json.get("parameters", {}).get("retry_after", 3)
+                    logger.warning(f"Telegram rate limited (429). Retrying after {retry_after}s.")
+                    time.sleep(retry_after)
+                    continue
+                elif e.error_code == 400 and ("message is not modified" in e.description or "message to edit not found" in e.description):
+                    return None
+                raise e
+            if attempt == max_retries - 1:
+                raise e
+            logger.warning(f"Telegram network error. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})")
+            time.sleep(delay)
+
 def bot_reply_first(message: Message, who: str, bot: TeleBot) -> Message:
     """Create the first reply message which make user feel the bot is working."""
-    return bot.reply_to(
+    return telebot_retry(
+        bot.reply_to,
         message, f"*{who}* is _thinking_ \\.\\.\\.", parse_mode="MarkdownV2"
     )
 
@@ -68,7 +89,8 @@ def bot_reply_markdown(
             return True
         REPLY_MESSAGE_CACHE[cache_key] = text
         if len(text.encode("utf-8")) <= BOT_MESSAGE_LENGTH or not split_text:
-            bot.edit_message_text(
+            telebot_retry(
+                bot.edit_message_text,
                 f"*{who}*:\n{telegramify_markdown.markdownify(text)}",
                 chat_id=reply_id.chat.id,
                 message_id=reply_id.message_id,
@@ -79,7 +101,8 @@ def bot_reply_markdown(
 
         # Need a split of message
         msgs = smart_split(text, BOT_MESSAGE_LENGTH)
-        bot.edit_message_text(
+        telebot_retry(
+            bot.edit_message_text,
             f"*{who}* \\[1/{len(msgs)}\\]:\n{telegramify_markdown.markdownify(msgs[0])}",
             chat_id=reply_id.chat.id,
             message_id=reply_id.message_id,
@@ -87,7 +110,8 @@ def bot_reply_markdown(
             disable_web_page_preview=disable_web_page_preview,
         )
         for i in range(1, len(msgs)):
-            bot.reply_to(
+            telebot_retry(
+                bot.reply_to,
                 reply_id.reply_to_message,
                 f"*{who}* \\[{i + 1}/{len(msgs)}\\]:\n{telegramify_markdown.markdownify(msgs[i])}",
                 parse_mode="MarkdownV2",
@@ -96,13 +120,16 @@ def bot_reply_markdown(
         return True
     except Exception:
         logger.exception("Error in bot_reply_markdown")
-        # logger.info(f"wrong markdown format: {text}")
-        bot.edit_message_text(
-            f"*{who}*:\n{text}",
-            chat_id=reply_id.chat.id,
-            message_id=reply_id.message_id,
-            disable_web_page_preview=disable_web_page_preview,
-        )
+        try:
+            telebot_retry(
+                bot.edit_message_text,
+                f"*{who}*:\n{text}",
+                chat_id=reply_id.chat.id,
+                message_id=reply_id.message_id,
+                disable_web_page_preview=disable_web_page_preview,
+            )
+        except Exception:
+            pass
         return False
 
 
