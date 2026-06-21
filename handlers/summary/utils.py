@@ -5,6 +5,7 @@ from urllib.parse import unquote
 
 from telebot import TeleBot
 from telebot.types import Message
+from handlers._utils import get_bot_me
 
 PROMPT = """\
 请将下面的聊天记录进行总结，包含讨论了哪些话题，有哪些亮点发言和主要观点。
@@ -35,7 +36,7 @@ def filter_message(message: Message, bot: TeleBot) -> bool:
         return False
     if not message.from_user:
         return False
-    if message.from_user.id == bot.get_me().id:
+    if message.from_user.id == get_bot_me(bot).id:
         return False
     if message.text.startswith("/"):
         return False

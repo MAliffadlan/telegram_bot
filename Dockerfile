@@ -1,11 +1,12 @@
-FROM bitnami/python:3.10
+FROM python:3.10-slim
 WORKDIR /app
-# Update the package list and install necessary packages including GDAL and Cairo
+# Update the package list and install necessary packages including GDAL, Cairo and CJK fonts
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         gdal-bin \
         libgdal-dev \
         libcairo2 \
+        fonts-wqy-microhei \
     && rm -rf /var/lib/apt/lists/*
 # Set environment variables so that Python package installer can find gdal-config
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal

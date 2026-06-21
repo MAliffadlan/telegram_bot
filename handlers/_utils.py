@@ -13,7 +13,7 @@ from expiringdict import ExpiringDict
 from telebot import TeleBot
 from telebot.types import Message
 from telebot.util import smart_split
-from telegramify_markdown.customize import get_runtime_config
+from telegramify_markdown.config import get_runtime_config
 from urlextract import URLExtract
 
 get_runtime_config().markdown_symbol.head_level_1 = (
@@ -25,6 +25,16 @@ get_runtime_config().markdown_symbol.link = (
 
 T = TypeVar("T", bound=Callable)
 logger = logging.getLogger("bot")
+
+
+_bot_me_cache = None
+
+
+def get_bot_me(bot: TeleBot) -> Any:
+    global _bot_me_cache
+    if _bot_me_cache is None:
+        _bot_me_cache = bot.get_me()
+    return _bot_me_cache
 
 
 BOT_MESSAGE_LENGTH = 4000
@@ -153,11 +163,11 @@ def wrap_handler(handler: T, bot: TeleBot) -> T:
 
                 if message.text is not None:
                     m = message.text = extract_prompt(
-                        message.text, bot.get_me().username
+                        message.text, get_bot_me(bot).username
                     )
                 elif message.caption is not None:
                     m = message.caption = extract_prompt(
-                        message.caption, bot.get_me().username
+                        message.caption, get_bot_me(bot).username
                     )
                 elif message.location and message.location.latitude is not None:
                     # for location map handler just return

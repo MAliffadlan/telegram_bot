@@ -5,6 +5,7 @@ from os import listdir
 from PIL import Image, ImageDraw, ImageFont
 from telebot import TeleBot
 from telebot.types import Message
+from handlers._utils import get_bot_me
 
 
 def split_lines(text, max_length=30):
@@ -130,7 +131,7 @@ def fake_handler(message: Message, bot: TeleBot) -> None:
     bot.reply_to(message, f"Generating {who}'s fake image")
     m = message.text.strip()
     prompt = m.strip()
-    prompt = extract_prompt(message.text, bot.get_me().username)
+    prompt = extract_prompt(message.text, get_bot_me(bot).username)
     # Usage
     renderer = ImageRenderer()
     heros_list = listdir("handlers/heros")

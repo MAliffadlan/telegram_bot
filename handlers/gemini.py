@@ -12,7 +12,7 @@ from telebot.types import Message
 from ._utils import bot_reply_first, bot_reply_markdown, enrich_text_with_urls, logger
 
 
-GOOGLE_GEMINI_KEY = environ.get("GEMIMI_PRO_KEY")
+GOOGLE_GEMINI_KEY = environ.get("GOOGLE_GEMINI_API_KEY") or environ.get("GOOGLE_GEMINI_KEY") or environ.get("GEMIMI_PRO_KEY")
 
 genai.configure(api_key=GOOGLE_GEMINI_KEY)
 generation_config = {
@@ -36,9 +36,9 @@ gemini_file_player_dict = ExpiringDict(max_len=100, max_age_seconds=600)
 
 
 def make_new_gemini_convo(is_pro=False) -> ChatSession:
-    model_name = "gemini-1.5-flash-002"
+    model_name = "gemini-2.5-flash"
     if is_pro:
-        model_name = "gemini-2.0-flash-exp"
+        model_name = "gemini-2.0-flash"
 
     model = genai.GenerativeModel(
         model_name=model_name,

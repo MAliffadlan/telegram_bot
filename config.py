@@ -20,9 +20,12 @@ class Settings(BaseSettings):
     ollama_web_search_api_key: str | None = None
     ollama_web_search_max_results: int = 5
     ollama_web_search_timeout: int = 10
+    tigong_chat_id: int | None = None
 
     @cached_property
-    def openai_client(self) -> openai.OpenAI:
+    def openai_client(self) -> openai.OpenAI | None:
+        if not self.openai_api_key:
+            return None
         return openai.OpenAI(
             api_key=self.openai_api_key,
             base_url=self.openai_base_url,
